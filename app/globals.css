@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 210 40% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 11%;
+
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 210 40% 11%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 210 10% 45%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 174 72% 40%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 40% 11%;
+    --sidebar-primary: 174 72% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 210 40% 11%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 174 72% 40%;
+
+    /* Custom healthcare gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(174, 72%, 40%) 0%, hsl(199, 89%, 48%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(174, 72%, 40%) 0%, hsl(174, 72%, 30%) 50%, hsl(199, 89%, 40%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(210, 20%, 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(210, 100%, 60%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(210 20% 11% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(210 20% 11% / 0.08), 0 2px 4px -2px hsl(210 20% 11% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(210 20% 11% / 0.08), 0 4px 6px -4px hsl(210 20% 11% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(210 20% 11% / 0.1), 0 8px 10px -6px hsl(210 20% 11% / 0.08);
+    --shadow-glow: 0 0 40px hsl(174 72% 40% / 0.15);
+  }
+
+  .dark {
+    --background: 210 40% 8%;
+    --foreground: 210 20% 98%;
+
+    --card: 210 40% 12%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 210 40% 12%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 174 72% 45%;
+    --primary-foreground: 210 40% 8%;
+
+    --secondary: 210 30% 18%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 210 30% 18%;
+    --muted-foreground: 210 15% 60%;
+
+    --accent: 199 89% 50%;
+    --accent-foreground: 210 40% 8%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 210 30% 20%;
+    --input: 210 30% 20%;
+    --ring: 174 72% 45%;
+
+    --sidebar-background: 210 40% 10%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 174 72% 45%;
+    --sidebar-primary-foreground: 210 40% 8%;
+    --sidebar-accent: 210 30% 18%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 210 30% 20%;
+    --sidebar-ring: 174 72% 45%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(174, 72%, 45%) 0%, hsl(199, 89%, 50%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(174, 72%, 35%) 0%, hsl(174, 72%, 25%) 50%, hsl(199, 89%, 35%) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .hero-radial {
+    background-image: radial-gradient(circle at 80% 50%, white 0%, transparent 60%);
+  }
+
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    background: hsl(0 0% 100% / 0.8);
+  }
+
+  .glass-dark {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    background: hsl(210 40% 8% / 0.8);
+  }
+}
