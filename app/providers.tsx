@@ -15,19 +15,28 @@ function AuthRehydrator() {
   useEffect(() => {
     if (user) return;
     setLoading(true);
-    authService.refresh()
-      .then(() => authService.getMe())
-      .then((result) => {
+    authService.getMe()
+      .then(async (result) => {
         if (result) {
           setUser(result.user);
           setFamilyMembers(result.familyMembers);
         } else {
-          setUser(null);
+          // Access token may be expired — try refreshing once
+          try {
+            await authService.refresh();
+            const retried = await authService.getMe();
+            if (retried) {
+              setUser(retried.user);
+              setFamilyMembers(retried.familyMembers);
+            } else {
+              setUser(null);
+            }
+          } catch {
+            setUser(null);
+          }
         }
       })
-      .catch(() => {
-        setUser(null);
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
