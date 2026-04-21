@@ -15,29 +15,34 @@ function AuthRehydrator() {
   useEffect(() => {
     if (user) return;
     setLoading(true);
-    authService.getMe()
-      .then(async (result) => {
+
+    async function rehydrate() {
+      // Always try refresh first — if the access token is expired the cookie
+      // is still httpOnly so we can't inspect it; a refresh attempt is cheap.
+      try {
+        await authService.refresh();
+      } catch {
+        // Refresh failed → no valid session
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      try {
+        const result = await authService.getMe();
         if (result) {
           setUser(result.user);
           setFamilyMembers(result.familyMembers);
         } else {
-          // Access token may be expired — try refreshing once
-          try {
-            await authService.refresh();
-            const retried = await authService.getMe();
-            if (retried) {
-              setUser(retried.user);
-              setFamilyMembers(retried.familyMembers);
-            } else {
-              setUser(null);
-            }
-          } catch {
-            setUser(null);
-          }
+          setUser(null);
         }
-      })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    rehydrate();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Proactive silent refresh every 13 min (access token lifetime is 15 min)

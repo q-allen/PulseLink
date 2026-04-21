@@ -174,6 +174,7 @@ export const API_ENDPOINTS = {
   LOGIN:                "/api/auth/login",
   LOGOUT:               "/api/auth/logout",
   REFRESH:              "/api/auth/refresh",
+  WS_TOKEN:             "/api/auth/ws-token",
   FORGOT_PASSWORD:      "/api/auth/forgot-password",
   RESET_PASSWORD:       "/api/auth/reset-password",
   SET_DOCTOR_PASSWORD:  "/api/auth/set-doctor-password",
