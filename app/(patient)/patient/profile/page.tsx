@@ -188,7 +188,22 @@ export default function ProfilePage() {
       allergies: (user.allergies ?? []).join(", "),
     });
     setNewAddress((prev) => ({ ...prev, fullName: user.name ?? "" }));
-  }, [user]);
+    // Seed pharmacy store with address from complete page if not already present
+    if (user.address && savedAddresses.length === 0) {
+      addAddress({
+        fullName: user.name ?? "",
+        mobile: user.phone ?? "",
+        houseUnit: "",
+        street: user.address,
+        barangay: "",
+        city: "",
+        province: "",
+        zipCode: "",
+        notes: "",
+        isDefault: true,
+      });
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayName = useMemo(() => {
     const constructed = [profile.firstName, profile.middleName, profile.lastName]
@@ -559,6 +574,17 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       ))}
+                      {user?.address && (
+                        <div className="flex items-start gap-3 sm:col-span-2">
+                          <div className="p-2 bg-secondary rounded-lg shrink-0">
+                            <MapPin className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Address</p>
+                            <p className="text-sm font-medium text-foreground">{user.address}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -723,7 +749,7 @@ export default function ProfilePage() {
           <TabsContent value="addresses" className="space-y-4">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-foreground">Saved Delivery Addresses</h3>
+                <h3 className="font-semibold text-foreground">Saved Addresses</h3>
                 <Button size="sm" className="gap-1.5" onClick={() => setAddAddressOpen(true)}>
                   <Plus className="h-4 w-4" /> Add Address
                 </Button>
@@ -743,7 +769,7 @@ export default function ProfilePage() {
                           </div>
                           <p className="text-xs text-muted-foreground">{addr.mobile}</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {addr.houseUnit} {addr.street}, Brgy. {addr.barangay}, {addr.city}, {addr.province} {addr.zipCode}
+                            {[addr.houseUnit, addr.street, addr.barangay && `Brgy. ${addr.barangay}`, addr.city, addr.province, addr.zipCode].filter(Boolean).join(", ")}
                           </p>
                           {addr.notes && <p className="text-xs italic text-muted-foreground mt-0.5">{addr.notes}</p>}
                         </div>

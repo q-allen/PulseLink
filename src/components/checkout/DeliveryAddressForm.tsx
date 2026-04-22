@@ -33,6 +33,30 @@ export default function DeliveryAddressForm() {
   const hasAddresses = savedAddresses.length > 0;
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState({ ...emptyForm, fullName: user?.name ?? '', mobile: user?.phone ?? '' });
+
+  // Pre-populate from profile address if no saved addresses yet
+  useEffect(() => {
+    if (hasAddresses || !user?.address) return;
+    const parts = user.address.split(',').map((s) => s.trim());
+    // Try to parse: "houseUnit street, barangay, city, province zipCode"
+    const zipMatch = user.address.match(/(\d{4})/);
+    const zipCode = zipMatch?.[1] ?? '';
+    const [streetPart = '', barangay = '', city = '', provincePart = ''] = parts;
+    const province = provincePart.replace(/\d{4}/, '').trim();
+    addAddress({
+      fullName: user.name ?? '',
+      mobile: user.phone ?? '',
+      houseUnit: '',
+      street: streetPart,
+      barangay,
+      city,
+      province,
+      zipCode,
+      notes: '',
+      isDefault: true,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [errors, setErrors] = useState<Partial<typeof emptyForm>>({});
 
   const [provinces, setProvinces] = useState<PsgcItem[]>([]);

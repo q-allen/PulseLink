@@ -10,12 +10,13 @@
  */
 
 import { useEffect, useState } from "react";
-import { User, Mail, FileText, MapPin, Calendar, AlertCircle } from "lucide-react";
+import { User, Mail, FileText, MapPin, Calendar, AlertCircle, Phone, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { useBookingStore } from "@/store/bookingStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,7 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
+  const [isBookingForMyself, setIsBookingForMyself] = useState(false);
 
   // Validate all fields and notify parent
   useEffect(() => {
@@ -151,12 +153,42 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
   // Pre-fill ONLY PulseLink account email (read-only field)
   useEffect(() => {
     if (user?.email && !patientDetails.accountEmail) {
-      setPatientDetails({
-        accountEmail: user.email,
-      });
+      setPatientDetails({ accountEmail: user.email });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const handleBookingForMyselfToggle = (checked: boolean) => {
+    setIsBookingForMyself(checked);
+    if (checked && user) {
+      const nameParts = user.name?.split(' ') ?? [];
+      const firstName = user.firstName || nameParts[0] || '';
+      const lastName = user.lastName || nameParts[nameParts.length - 1] || '';
+      const middleName = user.middleName || (nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '') || '';
+      const sex = (user.gender as '' | 'male' | 'female' | 'other') || '';
+      syncLegacy({
+        firstName,
+        middleName,
+        lastName,
+        email: user.email || '',
+        dateOfBirth: user.birthdate || '',
+        sex,
+        homeAddress: user.address || '',
+      });
+    } else {
+      // Clear all fields when toggled off
+      syncLegacy({
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        email: '',
+        dateOfBirth: '',
+        sex: '',
+        homeAddress: '',
+      });
+      setTouched({});
+    }
+  };
 
   const syncLegacy = (patch: Partial<typeof patientDetails>) => {
     const merged = { ...patientDetails, ...patch };
@@ -254,60 +286,89 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
       </Card>
 
       {/* ── Section 4: Patient Profile ──────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="h-4 w-4 text-primary" />
-            {bookingForSomeoneElse ? "Patient Information" : "Your Information"}
-          </CardTitle>
+      <Card className="border-primary/20 overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="p-1.5 bg-primary/10 rounded-md">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              Patient Information
+            </CardTitle>
+            {isBookingForMyself && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                <CheckCircle2 className="h-3 w-3" />
+                Auto-filled
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2.5 mt-4 p-3 bg-background/60 rounded-lg border border-border/50">
+            <Switch
+              id="bookingForMyself"
+              checked={isBookingForMyself}
+              onCheckedChange={handleBookingForMyselfToggle}
+            />
+            <div>
+              <Label htmlFor="bookingForMyself" className="text-sm font-medium text-foreground cursor-pointer">
+                Booking for myself
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {isBookingForMyself ? "Fields below have been pre-filled from your account." : "Toggle on to auto-fill with your account details."}
+              </p>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-6">
 
           {/* Name row */}
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="firstName">
-                First Name <span className="text-destructive">*</span>
+              <Label htmlFor="firstName" className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                First Name <span className="text-destructive ml-0.5">*</span>
               </Label>
               <Input
                 id="firstName"
+                placeholder="Juan"
                 value={patientDetails.firstName}
                 onChange={(e) => set("firstName", e.target.value)}
                 onBlur={() => handleBlur("firstName")}
-                className={cn(
-                  showError("firstName") && "border-destructive focus-visible:ring-destructive"
-                )}
+                className={cn(showError("firstName") && "border-destructive focus-visible:ring-destructive")}
               />
               {showError("firstName") && (
-                <div className="flex items-center gap-1.5 text-destructive text-sm">
+                <div className="flex items-center gap-1.5 text-destructive text-xs">
                   <AlertCircle className="h-3.5 w-3.5" />
                   <span>{fieldErrors.firstName}</span>
                 </div>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="middleName">Middle Name</Label>
+              <Label htmlFor="middleName" className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                Middle Name
+              </Label>
               <Input
                 id="middleName"
+                placeholder="Santos"
                 value={patientDetails.middleName}
                 onChange={(e) => set("middleName", e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lastName">
-                Last Name <span className="text-destructive">*</span>
+              <Label htmlFor="lastName" className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                Last Name <span className="text-destructive ml-0.5">*</span>
               </Label>
               <Input
                 id="lastName"
+                placeholder="Dela Cruz"
                 value={patientDetails.lastName}
                 onChange={(e) => set("lastName", e.target.value)}
                 onBlur={() => handleBlur("lastName")}
-                className={cn(
-                  showError("lastName") && "border-destructive focus-visible:ring-destructive"
-                )}
+                className={cn(showError("lastName") && "border-destructive focus-visible:ring-destructive")}
               />
               {showError("lastName") && (
-                <div className="flex items-center gap-1.5 text-destructive text-sm">
+                <div className="flex items-center gap-1.5 text-destructive text-xs">
                   <AlertCircle className="h-3.5 w-3.5" />
                   <span>{fieldErrors.lastName}</span>
                 </div>
@@ -315,58 +376,73 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
             </div>
           </div>
 
-          {/* Date of Birth */}
-          <div className="space-y-1.5">
-            <Label htmlFor="dateOfBirth" className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              Date of Birth <span className="text-destructive ml-0.5">*</span>
-            </Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={patientDetails.dateOfBirth}
-              onChange={(e) => set("dateOfBirth", e.target.value)}
-              onBlur={() => handleBlur("dateOfBirth")}
-              max={new Date().toISOString().split("T")[0]}
-              className={cn(
-                showError("dateOfBirth") && "border-destructive focus-visible:ring-destructive"
+          {/* Date of Birth, Email & Phone row */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="dateOfBirth" className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                Date of Birth <span className="text-destructive ml-0.5">*</span>
+              </Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={patientDetails.dateOfBirth}
+                onChange={(e) => set("dateOfBirth", e.target.value)}
+                onBlur={() => handleBlur("dateOfBirth")}
+                max={new Date().toISOString().split("T")[0]}
+                className={cn(showError("dateOfBirth") && "border-destructive focus-visible:ring-destructive")}
+              />
+              {patientDetails.dateOfBirth && !showError("dateOfBirth") && (
+                <p className="text-xs text-muted-foreground">Age: {computeAge(patientDetails.dateOfBirth)} years old</p>
               )}
-            />
-            {showError("dateOfBirth") && (
-              <div className="flex items-center gap-1.5 text-destructive text-sm">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span>{fieldErrors.dateOfBirth}</span>
-              </div>
-            )}
-          </div>
+              {showError("dateOfBirth") && (
+                <div className="flex items-center gap-1.5 text-destructive text-xs">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>{fieldErrors.dateOfBirth}</span>
+                </div>
+              )}
+            </div>
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <Label htmlFor="patientEmail" className="flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              Email <span className="text-destructive ml-0.5">*</span>
-            </Label>
-            <Input
-              id="patientEmail"
-              type="email"
-              value={patientDetails.email}
-              onChange={(e) => set("email", e.target.value)}
-              onBlur={() => handleBlur("email")}
-              className={cn(
-                showError("email") && "border-destructive focus-visible:ring-destructive"
+            <div className="space-y-1.5">
+              <Label htmlFor="patientEmail" className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                Email <span className="text-destructive ml-0.5">*</span>
+              </Label>
+              <Input
+                id="patientEmail"
+                type="email"
+                placeholder="patient@email.com"
+                value={patientDetails.email}
+                onChange={(e) => set("email", e.target.value)}
+                onBlur={() => handleBlur("email")}
+                className={cn(showError("email") && "border-destructive focus-visible:ring-destructive")}
+              />
+              {showError("email") && (
+                <div className="flex items-center gap-1.5 text-destructive text-xs">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>{fieldErrors.email}</span>
+                </div>
               )}
-            />
-            {showError("email") && (
-              <div className="flex items-center gap-1.5 text-destructive text-sm">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span>{fieldErrors.email}</span>
-              </div>
-            )}
+            </div>
+
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="contactNumber" className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                Contact Number
+              </Label>
+              <Input
+                id="contactNumber"
+                type="tel"
+                placeholder="09XX XXX XXXX"
+                value={patientDetails.contactNumber ?? ""}
+                onChange={(e) => set("contactNumber" as keyof typeof patientDetails, e.target.value as never)}
+              />
+            </div>
           </div>
 
           {/* Sex */}
-          <div className="space-y-1.5">
-            <Label>
+          <div className="space-y-2.5">
+            <Label className="text-sm font-medium">
               Sex <span className="text-destructive">*</span>
             </Label>
             <RadioGroup
@@ -375,10 +451,18 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
                 set("sex", v as "" | "male" | "female" | "other");
                 handleBlur("sex");
               }}
-              className="flex gap-6"
+              className="flex flex-wrap gap-4"
             >
               {(["male", "female", "other"] as const).map((s) => (
-                <div key={s} className="flex items-center gap-2">
+                <div
+                  key={s}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-4 py-2.5 border transition-colors cursor-pointer",
+                    patientDetails.sex === s
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-muted/30 border-border hover:border-primary/50"
+                  )}
+                >
                   <RadioGroupItem value={s} id={`sex-${s}`} />
                   <Label htmlFor={`sex-${s}`} className="cursor-pointer capitalize font-normal">
                     {s === "male" ? "Male" : s === "female" ? "Female" : "Other"}
@@ -387,7 +471,7 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
               ))}
             </RadioGroup>
             {showError("sex") && (
-              <div className="flex items-center gap-1.5 text-destructive text-sm">
+              <div className="flex items-center gap-1.5 text-destructive text-sm mt-1.5">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{fieldErrors.sex}</span>
               </div>
@@ -400,18 +484,20 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
               <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
               Home Address <span className="text-destructive ml-0.5">*</span>
             </Label>
-            <Input
+            <Textarea
               id="homeAddress"
               placeholder="Street, Barangay, City, Province"
+              rows={2}
               value={patientDetails.homeAddress}
               onChange={(e) => set("homeAddress", e.target.value)}
               onBlur={() => handleBlur("homeAddress")}
               className={cn(
+                "resize-none",
                 showError("homeAddress") && "border-destructive focus-visible:ring-destructive"
               )}
             />
             {showError("homeAddress") && (
-              <div className="flex items-center gap-1.5 text-destructive text-sm">
+              <div className="flex items-center gap-1.5 text-destructive text-xs">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{fieldErrors.homeAddress}</span>
               </div>

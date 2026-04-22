@@ -15,6 +15,7 @@ export interface User {
   gender?: string;
   bloodType?: string;
   allergies?: string[];
+  address?: string;
   /** True once the patient/doctor finishes the onboarding wizard */
   isProfileComplete?: boolean;
   /** For doctors: wizard completion lives on DoctorProfile */
@@ -319,7 +320,7 @@ export interface Order {
   patientId: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
   deliveryAddress: string;
   prescriptionId?: string;
   createdAt: string;

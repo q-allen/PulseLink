@@ -63,7 +63,6 @@ export interface BackendOrderItem {
 /** Delivery pipeline labels — mirrors NowServing.ph pharmacy tracking. */
 export const DELIVERY_STEPS = [
   { key: "processing",       label: "Processing" },
-  { key: "shipped",          label: "Shipped" },
   { key: "out_for_delivery", label: "Out for Delivery" },
   { key: "delivered",        label: "Delivered" },
 ] as const;
@@ -161,6 +160,16 @@ export const pharmacyService = {
     if (orderId) form.append("order_id", String(orderId));
     const data = await api.upload<PrescriptionUploadResult>(API_ENDPOINTS.PRESCRIPTION_UPLOAD, form);
     return { success: true, data };
+  },
+
+  extractPrescription: async (file: File): Promise<ApiResponse<{ id: number; name: string; generic_name: string }[]>> => {
+    const form = new FormData();
+    form.append("file", file);
+    const data = await api.upload<{ medicines: { id: number; name: string; generic_name: string }[] }>(
+      API_ENDPOINTS.PRESCRIPTION_EXTRACT,
+      form,
+    );
+    return { success: true, data: data.medicines };
   },
 
   getDeliveryFee(province: string, subtotal: number): { fee: number; freeThreshold: number } {

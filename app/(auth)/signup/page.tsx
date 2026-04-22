@@ -221,7 +221,7 @@ export default function SignUpPage() {
       });
       setUser(user);
       toast({ title: "Account created!", description: "Welcome to PulseLink." });
-      router.push("/patient");
+      router.push("/patient/profile/complete");
     } catch (err) {
       toast({
         title: "Registration failed",

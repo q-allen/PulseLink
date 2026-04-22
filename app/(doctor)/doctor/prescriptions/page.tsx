@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { format, isAfter, subDays } from 'date-fns';
 import {
-  Calendar, FileText, MessageCircle, Plus, Printer,
-  Search, User,
+  Calendar, FileText, MessageCircle, Plus, Printer, Search,
 } from 'lucide-react';
 import { Medication, Patient, Doctor, Prescription } from '@/types';
 import { appointmentService } from '@/services/appointmentService';
@@ -100,6 +99,16 @@ export default function DoctorPrescriptionsPage() {
     [prescriptions, patients]
   );
 
+  const [expandedPatients, setExpandedPatients] = useState<Set<string>>(new Set());
+
+  const togglePatient = useCallback((pid: string) => {
+    setExpandedPatients((prev) => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid); else next.add(pid);
+      return next;
+    });
+  }, []);
+
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase();
     const weekLimit = subDays(new Date(), 7);
@@ -114,6 +123,15 @@ export default function DoctorPrescriptionsPage() {
       return true;
     });
   }, [enriched, filterMode, searchQuery]);
+
+  const groupedByPatient = useMemo(() => {
+    const map = new Map<string, { patient: Patient | undefined; prescriptions: PrescriptionWithPatient[] }>();
+    filtered.forEach((rx) => {
+      if (!map.has(rx.patientId)) map.set(rx.patientId, { patient: rx.patient, prescriptions: [] });
+      map.get(rx.patientId)!.prescriptions.push(rx);
+    });
+    return Array.from(map.values());
+  }, [filtered]);
 
   const resetIssueForm = () => {
     setPatientId('');
@@ -279,85 +297,115 @@ export default function DoctorPrescriptionsPage() {
           }
         />
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((rx, index) => (
-            <motion.div
-              key={rx.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.04 }}
-            >
-              <Card className={`h-full ${isActive(rx) ? 'border-primary/20 bg-primary/5' : ''}`}>
-                <CardContent className="p-4 flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-11 w-11 shrink-0">
-                      <AvatarImage src={rx.patient?.avatar} />
-                      <AvatarFallback>{rx.patient?.name?.[0] ?? '?'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{rx.patient?.name ?? 'Unknown patient'}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {format(new Date(rx.date), 'MMM d, yyyy')}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate italic">{rx.diagnosis}</p>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {buildMedSummary(rx.medications)}
-                      </p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <FileText className="h-4 w-4" />
+        <div className="space-y-4">
+          {groupedByPatient.map(({ patient, prescriptions: rxList }, gi) => {
+            const pid = rxList[0].patientId;
+            const isOpen = expandedPatients.has(pid);
+            const activeCount = rxList.filter(isActive).length;
+            return (
+              <motion.div
+                key={pid}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: gi * 0.04 }}
+              >
+                <Card>
+                  {/* Patient header row */}
+                  <div
+                    className="w-full text-left cursor-pointer"
+                    onClick={() => togglePatient(pid)}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={patient?.avatar} />
+                        <AvatarFallback>{patient?.name?.[0] ?? '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{patient?.name ?? 'Unknown patient'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {rxList.length} prescription{rxList.length !== 1 ? 's' : ''}
+                          {activeCount > 0 && (
+                            <span className="ml-2 text-success font-medium">{activeCount} active</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 h-7 text-xs"
+                          onClick={(e) => { e.stopPropagation(); handleMessagePatient(patient); }}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          Message
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setSelected(rx); setDetailOpen(true); }}>
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setSelected(rx); setPrintOpen(true); }}>
-                          Reprint
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleMessagePatient(rx.patient)}>
-                          Message Patient
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleIssueForPatient(rx)}>
-                          Issue New (Pre-fill)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        <Button
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs"
+                          onClick={(e) => { e.stopPropagation(); handleIssueForPatient(rxList[0]); }}
+                        >
+                          <Plus className="h-3 w-3" />
+                          New Rx
+                        </Button>
+                        <span className="text-muted-foreground text-xs">{isOpen ? '▲' : '▼'}</span>
+                      </div>
+                    </CardContent>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={isActive(rx)
-                      ? 'bg-success/15 text-success border-success/30'
-                      : 'bg-muted text-muted-foreground border-border'}>
-                      {isActive(rx) ? 'Active' : 'Expired'}
-                    </Badge>
-                    <Badge variant="secondary">{rx.medications.length} med{rx.medications.length !== 1 ? 's' : ''}</Badge>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      Valid until {format(new Date(rx.validUntil), 'MMM d')}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" className="gap-1.5" onClick={() => { setSelected(rx); setDetailOpen(true); }}>
-                      <User className="h-3.5 w-3.5" />
-                      View
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setSelected(rx); setPrintOpen(true); }}>
-                      <Printer className="h-3.5 w-3.5" />
-                      Reprint
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleMessagePatient(rx.patient)}>
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      Message
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                  {/* Prescription log rows */}
+                  {isOpen && (
+                    <div className="border-t border-border divide-y divide-border max-h-72 overflow-y-auto">
+                      {rxList.map((rx) => (
+                        <div key={rx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{rx.diagnosis}</p>
+                            <p className="text-xs text-muted-foreground truncate">{buildMedSummary(rx.medications)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(rx.date), 'MMM d, yyyy')} &bull; Valid until {format(new Date(rx.validUntil), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge className={isActive(rx)
+                              ? 'bg-success/15 text-success border-success/30 text-xs'
+                              : 'bg-muted text-muted-foreground border-border text-xs'}>
+                              {isActive(rx) ? 'Active' : 'Expired'}
+                            </Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <FileText className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-52 p-0">
+                                <div className="px-3 py-2 border-b border-border">
+                                  <span className="text-xs font-semibold text-muted-foreground">Actions</span>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto">
+                                  <DropdownMenuItem onClick={() => { setSelected(rx); setDetailOpen(true); }}>
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { setSelected(rx); setPrintOpen(true); }}>
+                                    Reprint
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleMessagePatient(rx.patient)}>
+                                    Message Patient
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleIssueForPatient(rx)}>
+                                    Issue New (Pre-fill)
+                                  </DropdownMenuItem>
+                                </div>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 

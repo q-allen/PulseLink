@@ -35,7 +35,7 @@ const CATEGORIES = ["All", "Pain Relief", "Antibiotics", "Cardiovascular", "Vita
 // NowServing pattern: horizontal step indicator showing the 4-stage pipeline.
 function DeliveryTracker({ order }: { order: BackendOrder }) {
   const currentIdx = DELIVERY_STEPS.findIndex((s) => s.key === order.status);
-  const stepIcons = [Package, Truck, MapPin, CheckCircle2];
+  const stepIcons = [Package, MapPin, CheckCircle2];
 
   return (
     <div className="space-y-3">
@@ -143,7 +143,7 @@ export default function PharmacyPage() {
   const { toast } = useToast();
   const {
     cart, cartCount, addToCart, prescriptionFile, hasRxItems,
-    prescriptionId, clearCart,
+    prescriptionId, clearCart, prescriptionUploadId, extractedMedIds, setExtractedMedIds,
   } = usePharmacyStore();
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -160,6 +160,15 @@ export default function PharmacyPage() {
   // Pre-fill banner: show when cart was populated from a prescription
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const showPrefillBanner = !!prescriptionId && !bannerDismissed;
+
+  // Re-extract on mount if prescription already uploaded but extracted IDs lost (e.g. page refresh)
+  useEffect(() => {
+    if (prescriptionFile && prescriptionUploadId && extractedMedIds.length === 0) {
+      pharmacyService.extractPrescription(prescriptionFile).then((res) => {
+        if (res.success && res.data.length > 0) setExtractedMedIds(res.data.map((m) => m.id));
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load medicine catalogue
   useEffect(() => {
@@ -182,7 +191,8 @@ export default function PharmacyPage() {
     const q = search.toLowerCase();
     const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q);
     const matchesCat = activeCategory === "All" || m.category === activeCategory;
-    return matchesSearch && matchesCat;
+    const matchesRx = extractedMedIds.length === 0 || extractedMedIds.includes(Number(m.id));
+    return matchesSearch && matchesCat && matchesRx;
   });
 
   const handleAddToCart = (medicine: Medicine) => {
@@ -358,7 +368,7 @@ export default function PharmacyPage() {
             NowServing: if you came from a consultation, you don't need to
             manually upload — the digital Rx is already linked.
         ─────────────────────────────────────────────────────────────────────── */}
-        {!prescriptionId && (
+        {(!prescriptionId || prescriptionFile) && (
           <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
             <CardContent className="p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
@@ -372,6 +382,18 @@ export default function PharmacyPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {extractedMedIds.length > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-xl text-sm">
+            <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+            <p className="flex-1 text-teal-800 dark:text-teal-200">
+              Showing <span className="font-semibold">{extractedMedIds.length}</span> medicine(s) found in your prescription.
+            </p>
+            <Button variant="ghost" size="sm" className="text-teal-600 h-7" onClick={() => setExtractedMedIds([])}>
+              Show all
+            </Button>
+          </div>
         )}
 
         {/* Rx warning — only if cart has Rx items, no prescription file, and no digital Rx linked */}

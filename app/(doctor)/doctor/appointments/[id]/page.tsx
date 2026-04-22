@@ -21,8 +21,12 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store";
 import { appointmentService } from "@/services/appointmentService";
-import { Appointment } from "@/types";
+import { Appointment, Prescription, LabResult, MedicalCertificate } from "@/types";
 import { getBaseUrl } from "@/services/api";
+import { chatService } from "@/services/chatService";
+import { medicalRecordsService } from "@/services/medicalRecordsService";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import LabRequestForm from "@/components/records/LabRequestForm";
 
 /**
@@ -66,6 +70,10 @@ export default function DoctorAppointmentDetailPage() {
   const [refundNote, setRefundNote] = useState("");
   const [consultNotes, setConsultNotes] = useState("");
   const [consultSummary, setConsultSummary] = useState("");
+  const [messagingLoading, setMessagingLoading] = useState(false);
+  const [medHistoryOpen, setMedHistoryOpen] = useState(false);
+  const [medHistory, setMedHistory] = useState<{ prescriptions: Prescription[]; labResults: LabResult[]; certificates: MedicalCertificate[] } | null>(null);
+  const [medHistoryLoading, setMedHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -132,6 +140,44 @@ export default function DoctorAppointmentDetailPage() {
       setRefundStep("confirming");
     } finally {
       setIsRefunding(false);
+    }
+  };
+
+  const handleMessagePatient = async () => {
+    if (!appointment || !user) return;
+    setMessagingLoading(true);
+    try {
+      const res = await chatService.createConversation(appointment.patientId, user.id, 'doctor');
+      if (res.success) {
+        router.push(`/doctor/messages?conversation=${res.data.id}`);
+      }
+    } catch {
+      toast({ title: "Error", description: "Could not open conversation.", variant: "destructive" });
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+  const handleViewMedicalHistory = async () => {
+    if (!appointment) return;
+    setMedHistoryOpen(true);
+    if (medHistory) return;
+    setMedHistoryLoading(true);
+    try {
+      const [rxRes, labRes, certRes] = await Promise.all([
+        medicalRecordsService.getPrescriptions(appointment.patientId),
+        medicalRecordsService.getLabResults(appointment.patientId),
+        medicalRecordsService.getCertificates(appointment.patientId),
+      ]);
+      setMedHistory({
+        prescriptions: rxRes.success ? rxRes.data : [],
+        labResults: labRes.success ? labRes.data : [],
+        certificates: certRes.success ? certRes.data : [],
+      });
+    } catch {
+      toast({ title: "Error", description: "Could not load medical history.", variant: "destructive" });
+    } finally {
+      setMedHistoryLoading(false);
     }
   };
 
@@ -344,11 +390,11 @@ export default function DoctorAppointmentDetailPage() {
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <MessageCircle className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleMessagePatient} disabled={messagingLoading}>
+              {messagingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
               Message Patient
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleViewMedicalHistory}>
               <FileDown className="h-4 w-4" />
               View Medical History
             </Button>
@@ -661,6 +707,83 @@ export default function DoctorAppointmentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Medical History Sheet ─────────────────────────────────────────── */}
+      <Sheet open={medHistoryOpen} onOpenChange={setMedHistoryOpen}>
+        <SheetContent className="w-full sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Medical History — {patientName}</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-6rem)] mt-4 pr-2">
+            {medHistoryLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : medHistory ? (
+              <div className="space-y-6">
+                {/* Prescriptions */}
+                <div>
+                  <p className="text-sm font-semibold mb-2">Prescriptions ({medHistory.prescriptions.length})</p>
+                  {medHistory.prescriptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No prescriptions on record.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {medHistory.prescriptions.map((rx) => (
+                        <div key={rx.id} className="rounded-lg border border-border p-3 text-sm space-y-1">
+                          <p className="font-medium">{rx.diagnosis}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(rx.date).toLocaleDateString()}</p>
+                          {rx.medications.map((m, i) => (
+                            <p key={i} className="text-xs">{m.name} — {m.dosage}, {m.frequency}</p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Separator />
+                {/* Lab Results */}
+                <div>
+                  <p className="text-sm font-semibold mb-2">Lab Results ({medHistory.labResults.length})</p>
+                  {medHistory.labResults.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No lab results on record.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {medHistory.labResults.map((lab) => (
+                        <div key={lab.id} className="rounded-lg border border-border p-3 text-sm space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium">{lab.testName}</p>
+                            <Badge variant="outline" className="text-[10px] capitalize">{lab.status}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{new Date(lab.date).toLocaleDateString()}</p>
+                          {lab.notes && <p className="text-xs text-muted-foreground">{lab.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Separator />
+                {/* Medical Certificates */}
+                <div>
+                  <p className="text-sm font-semibold mb-2">Medical Certificates ({medHistory.certificates.length})</p>
+                  {medHistory.certificates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No certificates on record.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {medHistory.certificates.map((cert) => (
+                        <div key={cert.id} className="rounded-lg border border-border p-3 text-sm space-y-1">
+                          <p className="font-medium">{cert.purpose}</p>
+                          <p className="text-xs text-muted-foreground">{cert.diagnosis} · {cert.restDays} rest day(s)</p>
+                          <p className="text-xs text-muted-foreground">{new Date(cert.date).toLocaleDateString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
 
       {/* ── Guided Refund Dialog ─────────────────────────────────────────── */}
       <Dialog open={refundOpen} onOpenChange={(open) => { if (!open) closeRefundDialog(); }}>

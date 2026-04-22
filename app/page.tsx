@@ -578,19 +578,82 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-secondary/50 border-t border-border py-6 sm:py-8">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg gradient-primary">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
+      <footer className="bg-secondary/50 border-t border-border">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+            {/* Brand */}
+            <div className="lg:col-span-2">
+              <Link href="/" className="flex items-center gap-2 mb-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
+                  <Activity className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <span className="text-xl font-bold text-foreground">PulseLink</span>
+              </Link>
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+                Fast, secure online doctor consultations in the Philippines. Book, consult, and receive digital prescriptions — all in one place.
+              </p>
             </div>
-            <span className="text-base sm:text-lg lg:text-xl font-bold text-foreground">PulseLink</span>
-          </Link>
-          <p className="text-xs sm:text-sm text-muted-foreground">&copy; {new Date().getFullYear()} PulseLink. All rights reserved.</p>
-          <a href="mailto:careconnect126@gmail.com" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors" title="careconnect126@gmail.com">
-            <img src="/gmail.svg" alt="Gmail" className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="hidden sm:inline">pulselink99@gmail.com</span>
-          </a>
+
+            {/* Platform */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-4">Platform</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'Specialties', href: '#specialties' },
+                  { label: 'How It Works', href: '#how-it-works' },
+                  { label: 'Features', href: '#features' },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Account + Socials */}
+            <div className="flex gap-10">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-4">Account</h4>
+                <ul className="space-y-2.5">
+                  {[
+                    { label: 'Sign Up Free', href: '/signup' },
+                    { label: 'Sign In', href: '/signin' },
+                    { label: 'Browse Doctors', href: '/signin' },
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <Link href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-4">Socials</h4>
+                <ul className="space-y-2.5">
+                  <li>
+                    <a href="mailto:pulselink99@gmail.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      <img src="/gmail.svg" alt="Gmail" className="h-4 w-4" />
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="border-t border-border">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} PulseLink. All rights reserved.</p>
+            <div className="flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs text-muted-foreground">Secure &amp; HIPAA-aligned telemedicine</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

@@ -9,12 +9,13 @@ import { pharmacyService } from '@/services/pharmacyService';
 
 interface PrescriptionUploadProps {
   compact?: boolean;
+  onExtracted?: (medicineIds: number[]) => void;
 }
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 
-export default function PrescriptionUpload({ compact = false }: PrescriptionUploadProps) {
-  const { prescriptionFile, setPrescription } = usePharmacyStore();
+export default function PrescriptionUpload({ compact = false, onExtracted }: PrescriptionUploadProps) {
+  const { prescriptionFile, setPrescription, setExtractedMedIds } = usePharmacyStore();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -31,14 +32,23 @@ export default function PrescriptionUpload({ compact = false }: PrescriptionUplo
     }
 
     const localUrl = URL.createObjectURL(file);
-    // Optimistically show the file while uploading
     setPrescription(file, localUrl, null);
     setUploading(true);
 
     try {
-      const res = await pharmacyService.uploadPrescription(file);
-      setPrescription(file, localUrl, res.data.id);
-      toast({ title: 'Prescription uploaded', description: `${file.name} has been attached and submitted for review.` });
+      const [uploadRes, extractRes] = await Promise.all([
+        pharmacyService.uploadPrescription(file),
+        pharmacyService.extractPrescription(file),
+      ]);
+      setPrescription(file, localUrl, uploadRes.data.id);
+      if (extractRes.success && extractRes.data.length > 0) {
+        setExtractedMedIds(extractRes.data.map((m) => m.id));
+        onExtracted?.(extractRes.data.map((m) => m.id));
+        toast({ title: 'Prescription uploaded', description: `Found ${extractRes.data.length} medicine(s) from your prescription.` });
+      } else {
+        setExtractedMedIds([]);
+        toast({ title: 'Prescription uploaded', description: `${file.name} has been attached and submitted for review.` });
+      }
     } catch {
       // Keep the local preview but clear the upload ID — order will be blocked server-side
       setPrescription(file, localUrl, null);

@@ -78,7 +78,35 @@ export const medicalRecordsService = {
   // Certificate Requests
   async getCertificateRequests(): Promise<ApiResponse<any[]>> {
     const data = await api.get<any[]>(API_ENDPOINTS.CERT_REQUESTS);
-    return { data, success: true };
+    const mapped = (Array.isArray(data) ? data : []).map((item: any) => {
+      const p = item?.patient_details ?? {};
+      const apt = item?.appointment_details;
+      // fallback: split patient_name if patient_details is missing
+      const nameParts = (item?.patient_name ?? "").split(" ");
+      return {
+        id: item.id,
+        patient: {
+          id: item.patient,
+          first_name: p.first_name || nameParts[0] || "",
+          last_name:  p.last_name  || nameParts.slice(1).join(" ") || "",
+          email:      p.email      || "",
+          phone:      p.phone      || undefined,
+          date_of_birth: p.date_of_birth || undefined,
+          gender:     p.gender     || undefined,
+          blood_type: p.blood_type || undefined,
+          address:    p.address    || undefined,
+        },
+        appointment: apt
+          ? { id: apt.id, date: apt.date ?? "", time: apt.time || undefined, type: apt.type || undefined }
+          : undefined,
+        purpose:    item.purpose    ?? "",
+        notes:      item.notes      ?? "",
+        status:     item.status     ?? "pending",
+        certificate: item.certificate ?? undefined,
+        created_at: item.created_at  ?? "",
+      };
+    });
+    return { data: mapped, success: true };
   },
 
   async requestCertificate(data: {

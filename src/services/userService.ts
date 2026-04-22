@@ -26,6 +26,7 @@ export interface BackendUserFull {
   gender: string;
   blood_type: string;
   allergies: string[];
+  address?: string;
   role: "patient" | "doctor" | "admin";
   avatar?: string | null;
   is_profile_complete: boolean;
@@ -60,6 +61,7 @@ export function mapBackendUser(u: BackendUserFull): User {
     gender: u.gender ?? "",
     bloodType: u.blood_type ?? "",
     allergies: u.allergies ?? [],
+    address: u.address ?? "",
     role: u.role,
     avatar: u.avatar ?? undefined,
     isProfileComplete: u.is_profile_complete ?? false,
@@ -89,6 +91,7 @@ export interface PatientProfileStep1 {
   phone: string;
   birthdate: string; // YYYY-MM-DD
   gender: "male" | "female" | "other";
+  address?: string;
 }
 
 export interface PatientProfileStep2 {
@@ -100,6 +103,7 @@ export interface PatientProfileCompletion
   extends Partial<PatientProfileStep1>,
     Partial<PatientProfileStep2> {
   is_profile_complete?: boolean;
+  address?: string;
 }
 
 export const userService = {

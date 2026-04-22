@@ -23,6 +23,8 @@ export interface PharmacyState {
   prescriptionUploadId: number | null;   // ID returned by backend after upload
   /** ID of the prescription that pre-filled the cart (from consultation handoff) */
   prescriptionId: number | null;
+  /** Medicine IDs extracted from the uploaded prescription via Textract */
+  extractedMedIds: number[];
   selectedAddressId: string | null;
   savedAddresses: DeliveryAddress[];
   selectedPaymentMethod: string;
@@ -31,6 +33,7 @@ export interface PharmacyState {
   updateQuantity: (medicineId: string, quantity: number) => void;
   clearCart: () => void;
   setPrescription: (file: File | null, url: string | null, uploadId?: number | null) => void;
+  setExtractedMedIds: (ids: number[]) => void;
   prefillFromPrescription: (items: BackendOrderItem[], prescriptionId: number) => void;
   setSelectedAddress: (id: string) => void;
   addAddress: (address: Omit<DeliveryAddress, 'id'>) => void;
@@ -46,6 +49,7 @@ export const usePharmacyStore = create<PharmacyState>((set, get) => ({
   prescriptionUrl: null,
   prescriptionUploadId: null,
   prescriptionId: null,
+  extractedMedIds: [],
   selectedAddressId: null,
   savedAddresses: [],
   selectedPaymentMethod: 'cod',
@@ -77,9 +81,11 @@ export const usePharmacyStore = create<PharmacyState>((set, get) => ({
             ),
     })),
 
-  clearCart: () => set({ cart: [], prescriptionFile: null, prescriptionUrl: null, prescriptionId: null, prescriptionUploadId: null }),
+  clearCart: () => set({ cart: [], prescriptionFile: null, prescriptionUrl: null, prescriptionId: null, prescriptionUploadId: null, extractedMedIds: [] }),
 
   setPrescription: (file, url, uploadId = null) => set({ prescriptionFile: file, prescriptionUrl: url, prescriptionUploadId: uploadId }),
+
+  setExtractedMedIds: (ids) => set({ extractedMedIds: ids }),
 
   /**
    * Pre-fill cart from backend prescription items.
@@ -111,6 +117,10 @@ export const usePharmacyStore = create<PharmacyState>((set, get) => ({
   setSelectedAddress: (id) => set({ selectedAddressId: id }),
 
   addAddress: (address) => {
+    const existing = get().savedAddresses.find(
+      (a) => a.street === address.street && a.fullName === address.fullName
+    );
+    if (existing) return;
     const id = `addr-${Date.now()}`;
     set((state) => ({
       savedAddresses: [...state.savedAddresses, { ...address, id }],

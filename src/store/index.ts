@@ -9,6 +9,8 @@ interface AuthState {
   isLoading: boolean;
   /** Saved family members — fetched once from GET /api/auth/me/ and kept in sync */
   familyMembers: import('@/types').FamilyMember[];
+  /** True after the user has seen the profile wizard at least once */
+  hasSeenProfileWizard: boolean;
   setUser: (user: User | null) => void;
   /** Merge partial fields into the current user without replacing the whole object */
   updateUser: (patch: Partial<User>) => void;
@@ -26,45 +28,56 @@ interface AuthState {
   removeFamilyMember: (id: number) => void;
   /** Replace a family member by id (optimistic after PATCH) */
   updateFamilyMember: (id: number, patch: Partial<import('@/types').FamilyMember>) => void;
+  markProfileWizardSeen: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  familyMembers: [],
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
-  updateUser: (patch) =>
-    set((state) =>
-      state.user ? { user: { ...state.user, ...patch } } : state
-    ),
-  setLoading: (isLoading) => set({ isLoading }),
-  logout: () => {
-    if (typeof document !== "undefined") {
-      document.cookie = "user_role=;path=/;max-age=0";
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      familyMembers: [],
+      hasSeenProfileWizard: false,
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      updateUser: (patch) =>
+        set((state) =>
+          state.user ? { user: { ...state.user, ...patch } } : state
+        ),
+      setLoading: (isLoading) => set({ isLoading }),
+      logout: () => {
+        if (typeof document !== "undefined") {
+          document.cookie = "user_role=;path=/;max-age=0";
+        }
+        set({ user: null, isAuthenticated: false, familyMembers: [] });
+      },
+      setProfileComplete: (complete) =>
+        set((state) =>
+          state.user ? { user: { ...state.user, isProfileComplete: complete } } : state
+        ),
+      setDoctorProfileComplete: (complete) =>
+        set((state) =>
+          state.user ? { user: { ...state.user, doctorProfileComplete: complete } } : state
+        ),
+      setFamilyMembers: (members) => set({ familyMembers: members }),
+      addFamilyMember: (member) =>
+        set((state) => ({ familyMembers: [...state.familyMembers, member] })),
+      removeFamilyMember: (id) =>
+        set((state) => ({ familyMembers: state.familyMembers.filter((m) => m.id !== id) })),
+      updateFamilyMember: (id, patch) =>
+        set((state) => ({
+          familyMembers: state.familyMembers.map((m) =>
+            m.id === id ? { ...m, ...patch } : m
+          ),
+        })),
+      markProfileWizardSeen: () => set({ hasSeenProfileWizard: true }),
+    }),
+    {
+      name: 'auth-wizard-storage',
+      partialize: (state) => ({ hasSeenProfileWizard: state.hasSeenProfileWizard }),
     }
-    set({ user: null, isAuthenticated: false, familyMembers: [] });
-  },
-  setProfileComplete: (complete) =>
-    set((state) =>
-      state.user ? { user: { ...state.user, isProfileComplete: complete } } : state
-    ),
-  setDoctorProfileComplete: (complete) =>
-    set((state) =>
-      state.user ? { user: { ...state.user, doctorProfileComplete: complete } } : state
-    ),
-  setFamilyMembers: (members) => set({ familyMembers: members }),
-  addFamilyMember: (member) =>
-    set((state) => ({ familyMembers: [...state.familyMembers, member] })),
-  removeFamilyMember: (id) =>
-    set((state) => ({ familyMembers: state.familyMembers.filter((m) => m.id !== id) })),
-  updateFamilyMember: (id, patch) =>
-    set((state) => ({
-      familyMembers: state.familyMembers.map((m) =>
-        m.id === id ? { ...m, ...patch } : m
-      ),
-    })),
-}));
+  )
+);
 
 // Notification Store
 interface NotificationState {

@@ -236,6 +236,7 @@ export const API_ENDPOINTS = {
   MEDICINES:            "/api/pharmacy/medicines",
   MEDICINE_DETAIL:      (id: number | string) => `/api/pharmacy/medicines/${id}`,
   PRESCRIPTION_UPLOAD:  "/api/pharmacy/prescriptions/upload",
+  PRESCRIPTION_EXTRACT: "/api/pharmacy/prescriptions/extract",
   ORDERS:               "/api/pharmacy/orders",
   ORDER_FROM_PRESCRIPTION: "/api/pharmacy/orders/from-prescription",
   ORDER_DETAIL:         (id: number | string) => `/api/pharmacy/orders/${id}`,

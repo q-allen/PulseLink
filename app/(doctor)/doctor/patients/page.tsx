@@ -98,24 +98,19 @@ export default function DoctorPatientsPage() {
 
   const [patientDetails, setPatientDetails] = useState<Map<string, import('@/types').Patient>>(new Map());
 
-  const fetchPatients = async () => {
-    if (!user) return;
-    setLoading(true);
-    const [aptsRes, patientsRes] = await Promise.all([
-      appointmentService.getAppointments({ doctorId: user.id }),
-      doctorService.getMyPatients(),
-    ]);
-    if (aptsRes.success) {
-      setAppointments(aptsRes.data);
-    }
-    if (patientsRes.success) {
-      setPatientDetails(new Map(patientsRes.data.map((p) => [p.id, p])));
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    if (user) fetchPatients();
+    if (!user) return;
+    const fetchPatients = async () => {
+      setLoading(true);
+      const [aptsRes, patientsRes] = await Promise.all([
+        appointmentService.getAppointments({ doctorId: user.id }),
+        doctorService.getMyPatients(),
+      ]);
+      if (aptsRes.success) setAppointments(aptsRes.data);
+      if (patientsRes.success) setPatientDetails(new Map(patientsRes.data.map((p) => [p.id, p])));
+      setLoading(false);
+    };
+    fetchPatients();
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patientSummaries = useMemo<PatientSummary[]>(() => {
@@ -217,19 +212,19 @@ export default function DoctorPatientsPage() {
   const filesForSelected = useMemo(() => {
     if (!selected) return [];
     const rx = prescriptions.filter((p) => p.patientId === selected.patient.id).map((p) => ({
-      id: p.id,
+      id: `rx-${p.id}`,
       title: p.diagnosis,
       date: p.date,
       type: 'Prescription',
     }));
     const labs = labResults.filter((l) => l.patientId === selected.patient.id).map((l) => ({
-      id: l.id,
+      id: `lab-${l.id}`,
       title: l.testName,
       date: l.date,
       type: 'Lab Result',
     }));
     const certs = certificates.filter((c) => c.patientId === selected.patient.id).map((c) => ({
-      id: c.id,
+      id: `cert-${c.id}`,
       title: c.purpose,
       date: c.date,
       type: 'Certificate',
@@ -444,14 +439,14 @@ export default function DoctorPatientsPage() {
       )}
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl flex flex-col h-[560px]">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Patient Profile</DialogTitle>
             <DialogDescription>Review history, files, notes, and contact details.</DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
+              <div className="flex items-center gap-3 shrink-0">
                 <Avatar className="h-14 w-14">
                   <AvatarImage src={selected.patient.avatar} />
                   <AvatarFallback>{selected.patient.name?.[0]}</AvatarFallback>
@@ -464,15 +459,15 @@ export default function DoctorPatientsPage() {
                 </div>
               </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+                <TabsList className="shrink-0">
                   <TabsTrigger value="history">History</TabsTrigger>
                   <TabsTrigger value="files">Files</TabsTrigger>
                   <TabsTrigger value="notes">Notes</TabsTrigger>
                   <TabsTrigger value="contact">Contact</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="history" className="space-y-3">
+                <TabsContent value="history" className="flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
                   {historyForSelected.length === 0 ? (
                     <div className="text-sm text-muted-foreground">No appointments yet.</div>
                   ) : (
@@ -488,7 +483,7 @@ export default function DoctorPatientsPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="files" className="space-y-3">
+                <TabsContent value="files" className="flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
                   {filesForSelected.length === 0 ? (
                     <div className="text-sm text-muted-foreground">No files yet.</div>
                   ) : (
@@ -504,7 +499,7 @@ export default function DoctorPatientsPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="notes" className="space-y-3">
+                <TabsContent value="notes" className="flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
                   <Button size="sm" onClick={() => setNoteDialogOpen(true)} className="gap-2">
                     <FileText className="h-4 w-4" />Add Note
                   </Button>
@@ -520,7 +515,7 @@ export default function DoctorPatientsPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="contact" className="space-y-3">
+                <TabsContent value="contact" className="flex-1 overflow-y-auto mt-3 pr-1">
                   <div className="rounded-lg border border-border p-3 space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="h-4 w-4" />
@@ -539,7 +534,7 @@ export default function DoctorPatientsPage() {
               </Tabs>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>

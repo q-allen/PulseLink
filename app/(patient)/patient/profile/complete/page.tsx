@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User, Phone, Calendar, Heart, Shield, Users,
+  User, Phone, Calendar, Heart, Shield, Users, MapPin,
   ChevronRight, ChevronLeft, Check, Loader2, Plus, X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,17 +28,31 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuthStore, syncAuthFromBackend } from "@/store/useAuthStore";
+import { usePharmacyStore } from "@/store/pharmacyStore";
+import type { DeliveryAddress } from "@/store/pharmacyStore";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { api, API_ENDPOINTS } from "@/services/api";
 import type { FamilyMember, FamilyMemberRelationship } from "@/types";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 const STEPS = [
-  { label: "Personal",     icon: User },
-  { label: "Health",       icon: Heart },
+  { label: "Personal", icon: User },
+  { label: "Address",  icon: MapPin },
+  { label: "Health",   icon: Heart },
   { label: "HMO & Family", icon: Shield },
+];
+
+type AddressFieldKey = keyof Omit<DeliveryAddress, "id" | "isDefault">;
+const ADDRESS_FIELDS: { label: string; key: AddressFieldKey; placeholder: string; required?: boolean }[] = [
+  { label: "House/Unit No.",     key: "houseUnit", placeholder: "123" },
+  { label: "Street",             key: "street",    placeholder: "Makati Avenue",           required: true },
+  { label: "Barangay",           key: "barangay",  placeholder: "Bel-Air" },
+  { label: "City / Municipality",key: "city",      placeholder: "Makati City",            required: true },
+  { label: "Province",           key: "province",  placeholder: "Metro Manila" },
+  { label: "ZIP Code",           key: "zipCode",   placeholder: "1209" },
+  { label: "Delivery Notes",     key: "notes",     placeholder: "Near the gate, blue mailbox" },
 ];
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
@@ -58,19 +72,26 @@ const emptyMember: NewMemberForm = { name: "", age: "", gender: "", relationship
 export default function PatientProfileCompletePage() {
   const router = useRouter();
   const { setUser, setProfileComplete, setFamilyMembers, familyMembers, addFamilyMember } = useAuthStore();
+  const { addAddress } = usePharmacyStore();
   const { toast } = useToast();
 
   const [step, setStep]         = useState(1);
   const [saving, setSaving]     = useState(false);
   const [loading, setLoading]   = useState(true);
 
-  // Step 1
+  // Step 1 — personal
   const [firstName,  setFirstName]  = useState("");
   const [lastName,   setLastName]   = useState("");
   const [middleName, setMiddleName] = useState("");
   const [phone,      setPhone]      = useState("");
   const [birthdate,  setBirthdate]  = useState("");
   const [gender,     setGender]     = useState("");
+
+  // Step 2 — delivery address
+  const [deliveryAddr, setDeliveryAddr] = useState<Omit<DeliveryAddress, "id" | "isDefault">>({
+    fullName: "", mobile: "", houseUnit: "", street: "",
+    barangay: "", city: "", province: "", zipCode: "", notes: "",
+  });
 
   // Step 2
   const [bloodType,    setBloodType]    = useState("");
@@ -127,6 +148,25 @@ export default function PatientProfileCompletePage() {
   };
 
   const saveStep2 = async () => {
+    const parts = [deliveryAddr.houseUnit, deliveryAddr.street, deliveryAddr.barangay, deliveryAddr.city, deliveryAddr.province]
+      .filter(Boolean);
+    const addressStr = parts.join(", ");
+    const fullAddress = [addressStr, deliveryAddr.zipCode].filter(Boolean).join(" ");
+    if (fullAddress) {
+      setSaving(true);
+      const res = await userService.completePatientProfile({ address: fullAddress });
+      setSaving(false);
+      if (!res.success) { toast({ title: "Error", description: res.error, variant: "destructive" }); return false; }
+      syncAuthFromBackend(res.data);
+    }
+    if (deliveryAddr.street && deliveryAddr.city) {
+      const fullName = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(" ");
+      addAddress({ ...deliveryAddr, fullName, mobile: phone.trim(), isDefault: true });
+    }
+    return true;
+  };
+
+  const saveStep3 = async () => {
     setSaving(true);
     const res = await userService.completePatientProfile({ blood_type: bloodType || undefined, allergies });
     setSaving(false);
@@ -174,8 +214,9 @@ export default function PatientProfileCompletePage() {
   };
 
   const handleNext = async () => {
-    if (step === 1) { const ok = await saveStep1(); if (ok) setStep(2); }
+    if (step === 1)      { const ok = await saveStep1(); if (ok) setStep(2); }
     else if (step === 2) { const ok = await saveStep2(); if (ok) setStep(3); }
+    else if (step === 3) { const ok = await saveStep3(); if (ok) setStep(4); }
     else { await finishWizard(); }
   };
 
@@ -340,12 +381,39 @@ export default function PatientProfileCompletePage() {
                       </select>
                     </div>
                   </div>
+
                 </CardContent>
               </Card>
             )}
 
-            {/* ── Step 2: Health Info (optional) ── */}
+            {/* ── Step 2: Delivery Address ── */}
             {step === 2 && (
+              <Card className="shadow-xl border-2">
+                <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" /> Address
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">Optional — pre-fills checkout so you don't re-enter it</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {ADDRESS_FIELDS.map(({ label, key, placeholder, required }) => (
+                      <div key={key} className={`space-y-1.5${key === "notes" || key === "street" ? " col-span-2" : ""}`}>
+                        <Label className="text-xs">{label}{required ? " *" : ""}</Label>
+                        <Input
+                          placeholder={placeholder}
+                          value={deliveryAddr[key] ?? ""}
+                          onChange={(e) => setDeliveryAddr((p) => ({ ...p, [key]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Step 3: Health Info (optional) ── */}
+            {step === 3 && (
               <Card className="shadow-xl border-2">
                 <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -397,8 +465,8 @@ export default function PatientProfileCompletePage() {
               </Card>
             )}
 
-            {/* ── Step 3: HMO & Family (optional) ── */}
-            {step === 3 && (
+            {/* ── Step 4: HMO & Family (optional) ── */}
+            {step === 4 && (
               <Card className="shadow-xl border-2">
                 <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent">
                   <CardTitle className="text-lg flex items-center gap-2">
