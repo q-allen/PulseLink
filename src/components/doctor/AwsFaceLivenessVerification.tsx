@@ -10,7 +10,6 @@ import { AlertCircle, RefreshCw, ScanFace } from "lucide-react";
 
 import { doctorService, DoctorLivenessCompleteResponse, DoctorLivenessSessionResponse } from "@/services/doctorService";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AwsFaceLivenessVerificationProps {
@@ -129,53 +128,60 @@ export default function AwsFaceLivenessVerification({
   }, [onVerified, session]);
 
   return (
-    <Card className="w-full max-w-3xl mx-auto p-4 sm:p-5 bg-background shadow-2xl">
-      <div className="space-y-4">
-        <div className="text-center space-y-1">
-          <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <ScanFace className="h-5 w-5" />
+    <div className="w-full bg-background rounded-lg p-3">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ScanFace className="h-4 w-4" />
           </div>
-          <h2 className="text-xl font-semibold">AWS Face Liveness Check</h2>
-          <p className="text-sm text-muted-foreground">
-            Keep your face centered, follow the on-screen movement prompts, and stay in good lighting.
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-tight">Face Liveness Check</p>
+            <p className="text-xs text-muted-foreground leading-tight">
+              Center your face, follow prompts, ensure good lighting.
+            </p>
+          </div>
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={submitting}
+              className="ml-auto shrink-0 h-7 px-2 text-xs"
+            >
+              Cancel
+            </Button>
+          )}
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         )}
 
-        <div className="min-h-[420px] overflow-hidden rounded-2xl border bg-black/5">
+        <div className="overflow-hidden rounded-xl border bg-black/5">
           <ThemeProvider>
             {loadingSession || !session || !credentialProvider ? (
-              <div className="flex h-[420px] flex-col items-center justify-center gap-3 text-center">
+              <div className="flex h-64 flex-col items-center justify-center gap-2">
                 <Loader />
-                <p className="text-sm text-muted-foreground">
-                  Preparing your secure liveness session...
-                </p>
+                <p className="text-xs text-muted-foreground">Preparing session...</p>
               </div>
             ) : (
               <div className="relative">
                 {submitting && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/80 backdrop-blur-sm">
                     <Loader />
-                    <p className="text-sm text-muted-foreground">
-                      Confirming your liveness result...
-                    </p>
+                    <p className="text-xs text-muted-foreground">Confirming result...</p>
                   </div>
                 )}
-
                 <FaceLivenessDetectorCore
                   key={detectorKey}
                   sessionId={session.session_id}
                   region={session.region}
                   onAnalysisComplete={handleAnalysisComplete}
                   onError={(livenessError) => {
-                    // Clear session first so the detector unmounts and releases
-                    // its ReadableStream before the user can restart.
                     setSession(null);
                     setLoadingSession(false);
                     const raw = livenessError as unknown as Record<string, unknown>;
@@ -193,30 +199,18 @@ export default function AwsFaceLivenessVerification({
           </ThemeProvider>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={createSession}
-            disabled={loadingSession || submitting}
-            className="flex-1"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Restart Check
-          </Button>
-          {onCancel && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-              disabled={submitting}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={createSession}
+          disabled={loadingSession || submitting}
+          className="w-full h-8 text-xs"
+        >
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          Restart Check
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }

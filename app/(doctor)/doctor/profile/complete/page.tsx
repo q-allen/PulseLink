@@ -1005,7 +1005,7 @@ export default function DoctorProfileCompletePage() {
       {/* Auto-capture Modal */}
       <Dialog open={faceCaptureOpen} onOpenChange={setFaceCaptureOpen}>
         <DialogContent
-          className="max-w-3xl p-0 border-0 bg-transparent shadow-none"
+          className="max-w-lg p-0 overflow-hidden max-h-[90dvh] overflow-y-auto"
         >
           <DialogTitle className="sr-only">Face Verification</DialogTitle>
           <DialogDescription className="sr-only">
