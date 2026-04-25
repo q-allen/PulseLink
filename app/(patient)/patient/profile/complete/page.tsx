@@ -71,7 +71,7 @@ const emptyMember: NewMemberForm = { name: "", age: "", gender: "", relationship
 
 export default function PatientProfileCompletePage() {
   const router = useRouter();
-  const { setUser, setProfileComplete, setFamilyMembers, familyMembers, addFamilyMember } = useAuthStore();
+  const { setUser, setProfileComplete, setFamilyMembers, familyMembers, addFamilyMember, user: storeUser } = useAuthStore();
   const { addAddress } = usePharmacyStore();
   const { toast } = useToast();
 
@@ -111,7 +111,17 @@ export default function PatientProfileCompletePage() {
   const [savingMember, setSavingMember] = useState(false);
 
   // ── Fetch real profile on mount ───────────────────────────────────────────
+
   useEffect(() => {
+    // Pre-fill immediately from store (populated during signup)
+    if (storeUser) {
+      setFirstName(storeUser.firstName  ?? "");
+      setLastName(storeUser.lastName    ?? "");
+      setMiddleName(storeUser.middleName ?? "");
+      setPhone(storeUser.phone          ?? "");
+      setBirthdate(storeUser.birthdate  ?? "");
+      setGender(storeUser.gender        ?? "");
+    }
     userService.getCurrentUser().then((result) => {
       if (result) {
         const u = result.user;

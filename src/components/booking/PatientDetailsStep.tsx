@@ -174,6 +174,7 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
         dateOfBirth: user.birthdate || '',
         sex,
         homeAddress: user.address || '',
+        contactNumber: user.phone || '',
       });
     } else {
       // Clear all fields when toggled off
@@ -185,6 +186,7 @@ export default function PatientDetailsStep({ onValidationChange }: PatientDetail
         dateOfBirth: '',
         sex: '',
         homeAddress: '',
+        contactNumber: '',
       });
       setTouched({});
     }
