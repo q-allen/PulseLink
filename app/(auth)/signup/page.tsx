@@ -214,7 +214,7 @@ export default function SignUpPage() {
         firstName,
         middleName,
         lastName,
-        birthdate: birthdate!.toISOString().split("T")[0], // YYYY-MM-DD
+        birthdate: `${bdYear}-${String(bdMonth).padStart(2, "0")}-${String(bdDay).padStart(2, "0")}`,
         phone: `+63${mobileDigits}`,
         role: "patient",
         otp: otpDigits.join(""),
